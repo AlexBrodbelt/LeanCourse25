@@ -42,7 +42,7 @@ your proof is finished.
 -/
 
 example (a b : ℝ) : (a+b)^2 = a^2 + 2*a*b + b^2 := by
-  sorry
+  ring
   done
 
 /- In the first example above, take a closer look at where Lean displays parentheses.
@@ -90,7 +90,8 @@ but it doesn't use the assumptions `h` and `h'`
 -/
 
 example (a b c d : ℝ) (h : b = d + d) (h' : a = b + c) : a + b = c + 4 * d := by
-  sorry
+  rw [h', h]
+  ring
   done
 
 /- ## Rewriting with a lemma
@@ -128,7 +129,7 @@ right-hand side.
 -/
 
 example (a b c : ℝ) : exp (a + b - c) = (exp a * exp b) / (exp c * exp 0) := by
-  sorry
+  rw [exp_zero, mul_one, exp_sub, exp_add]
   done
 
 
@@ -139,7 +140,7 @@ The two lemmas below express the associativity and commutativity of multiplicati
 #check (mul_comm : ∀ a b : ℝ, a * b = b * a)
 
 example (a b c : ℝ) : a * b * c = b * (a * c) := by
-  sorry
+  rw [mul_comm a, mul_assoc]
   done
 
 
@@ -163,7 +164,9 @@ variable {G : Type*} [Group G] (g h : G)
 #check inv_inv g
 
 lemma inverse_of_a_commutator : ⁅g, h⁆⁻¹ = ⁅h, g⁆ := by
-  sorry
+  rw [commutatorElement_def, mul_inv_rev, inv_inv,
+    mul_inv_rev, inv_inv, mul_inv_rev, commutatorElement_def,
+    ← mul_assoc, ← mul_assoc]
   done
 
 end
@@ -189,11 +192,11 @@ In the case of ←, you can type it by typing "\l ", so backslash-l-space.
 -/
 
 example (a b c d : ℝ) (h : a = b + b) (h' : b = c) (h'' : a = d) : b + c = d := by
-  sorry
+  rw [← h'', h, ← h']
   done
 
 example (a b c d : ℝ) (h : a*d - 1 = c) (h' : a*d = b) : c = b - 1 := by
-  sorry
+  rw [← h', ← h]
   done
 
 /- ## Rewriting in a local assumption
@@ -235,11 +238,11 @@ Let's do some exercises using `calc`. Feel free to use `ring` in some steps.
 
 example (a b c : ℝ) (h : a = b + c) : exp (2 * a) = (exp b) ^ 2 * (exp c) ^ 2 := by
   calc
-    exp (2 * a) = exp (2 * (b + c))                 := by sorry
-              _ = exp ((b + b) + (c + c))           := by sorry
-              _ = exp (b + b) * exp (c + c)         := by sorry
-              _ = (exp b * exp b) * (exp c * exp c) := by sorry
-              _ = (exp b) ^ 2 * (exp c)^2           := by sorry
+    exp (2 * a) = exp (2 * (b + c))                 := by rw [h]
+              _ = exp ((b + b) + (c + c))           := by ring_nf
+              _ = exp (b + b) * exp (c + c)         := by rw [exp_add]
+              _ = (exp b * exp b) * (exp c * exp c) := by rw [exp_add, exp_add]
+              _ = (exp b) ^ 2 * (exp c) ^ 2           := by rw [sq, sq]
 
 /-
 From a practical point of view, when writing such a proof, it is sometimes convenient to:
@@ -254,24 +257,32 @@ Aligning the equal signs and `:=` signs is not necessary but looks tidy.
 
 /- Prove the following using a `calc` block. -/
 example (a b c d : ℝ) (h : c = a * d + b) (h' : b = a*d) : c = 2*d*a := by
-  sorry
-  done
+  calc
+  c =  a * d + b := by rw [h]
+  _ = a * d + a * d := by rw [h']
+  _ = (d + d) * a := by rw [← mul_add, mul_comm]
+  _ = 2 * d * a := by ring
+
 
 
 
 /- Prove the following using a `calc` block. -/
 
 example (a b c d : ℝ) : a + b + c + d = d + (b + a) + c := by
-  sorry
-  done
+  calc
+  a + b + c + d = d + (b + a) + c := by ring; done
 
 /- Prove the following using a `calc` block. -/
 
 #check sub_self
 
 example (a b c d : ℝ) (h : c + a = b*a - d) (h' : d = a * b) : a + c = 0 := by
-  sorry
-  done
+  calc
+  a + c = c + a := by rw [add_comm]
+  _ = b * a - d := by rw [h]
+  _ = b * a - a * b := by rw [h']
+  _ = a * b - a * b := by rw [mul_comm]
+  _ = 0 := by rw [sub_self]; done
 
 
 /- A ring is a collection of objects `R` with operations `+`, `*`,
@@ -293,8 +304,12 @@ variable (R : Type*) [Ring R]
 /- Use `calc` to prove the following from the axioms of rings, without using `ring`. -/
 
 example {a b c : R} (h : a + b = a + c) : b = c := by
-  sorry
-  done
+
+  calc
+  b = b + (a - a) := by rw [sub_self, add_zero]
+  _ = b + a - a := by rw [add_sub_assoc]
+  _ = c + a - a := by rw [add_comm b, h, add_comm]
+  _ = c := by rw [add_sub_assoc, sub_self, add_zero]; done
 
 end
 
@@ -330,15 +345,14 @@ variable (a b c x : ℝ)
 #check (zero_add a      : 0 + a = a)
 
 example : (a + b) * (a - b) = a^2 - b^2 := by
-  sorry
+  rw [add_mul, mul_sub, mul_sub, mul_comm b a, ← pow_two, ← pow_two,
+    add_sub, sub_add, sub_self, sub_zero]
   done
 
 
 -- Now redo it with `ring`.
 
 example : (a + b) * (a - b) = a^2 - b^2 := by
-  sorry
+  ring
   done
-
 end
-
