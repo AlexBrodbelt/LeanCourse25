@@ -204,8 +204,20 @@ Then state and prove the lemma that for any element of a strict bipointed type w
 `∀ z, z ≠ x₀ ∨ z ≠ x₁.` -/
 
 -- give the definition here
+structure Bipoint where
+  x₀ : Point
+  x₁ : Point
+  ne : x₁ ≠ x₀
 
 -- state and prove the lemma here
+example (bp : Bipoint) (z : Point) : bp.x₀ ≠ z ∨ bp.x₁ ≠ z := by
+  by_cases hz :  bp.x₀ ≠ z
+  · left
+    assumption
+  · push_neg at hz
+    right
+    rw [← hz]
+    exact bp.ne
 
 
 end Bipointed
@@ -218,7 +230,8 @@ behind notation. But you can use apply to use the lemmas about real numbers. -/
 
 abbrev PosRat : Type := {x : ℚ // 0 < x}
 
-def groupPosRat : Group PosRat := sorry
+def groupPosRat : Group PosRat where
+  inv_mul_cancel a := inv_mul_cancel a
 
 end Subtypes
 
@@ -227,12 +240,42 @@ section EquivalenceRelation
 -- Prove that the following defines an equivalence relation.
 def integerEquivalenceRelation : Setoid (ℤ × ℤ) where
   r := fun ⟨k, l⟩ ⟨m, n⟩ ↦ k + n = l + m
-  iseqv := sorry
+  iseqv := {
+    refl m := by dsimp; rw [add_comm]
+    symm := by intro m n hmn; dsimp at *; rw [add_comm, ← hmn, add_comm]
+    trans := by
+      intro m n k hmn hnk
+      dsimp at *
+      calc
+      m.1 + k.2 = m.1 + n.2 - n.2 + k.2 := by ring
+      _ = m.2 + n.1 - n.2 + k.2 := by rw [hmn]
+      _ = m.2 + (n.1 + k.2) - n.2 := by ring
+      _ = m.2 + k.1 := by rw [hnk]; ring
+
+
+  }
 
 /- This simp-lemma will simplify `x ≈ y` in the lemma below. -/
 @[simp] lemma integerEquivalenceRelation'_iff (a b : ℤ × ℤ) :
   letI := integerEquivalenceRelation; a ≈ b ↔ a.1 + b.2 = a.2 + b.1 := by rfl
 
-example : Quotient integerEquivalenceRelation ≃ ℤ := sorry
+
+noncomputable example : Quotient integerEquivalenceRelation ≃ ℤ := Equiv.symm <|
+  Equiv.ofBijective (fun (m : ℤ) ↦ Quotient.mk integerEquivalenceRelation ⟨m, 0⟩)
+  (
+  by
+  unfold Bijective
+  refine ⟨?Injective, ?Surjective⟩
+  · intro m n hmn
+    dsimp at hmn
+    rw [Quotient.eq_iff_equiv, integerEquivalenceRelation'_iff] at hmn
+    simpa using hmn
+  · intro m_n
+    use m_n.out.1 - m_n.out.2
+    rw [Quotient.mk_eq_iff_out, integerEquivalenceRelation'_iff]
+    ring
+  )
+
+
 
 end EquivalenceRelation

@@ -13,44 +13,89 @@ open Real Function Set Nat
 /-! # Exercises to practice. -/
 
 example (p q r s : Prop) (h : p ∧ q → r) (hp : p) (h' : q → s) : q → r ∧ s := by
-  sorry
+  intro hq
+  constructor
+  ·
+    apply h
+    constructor
+    ·
+      assumption
+    ·
+      assumption
+  ·
+    apply h'
+    assumption
   done
+
+
 
 example {α : Type*} {p q : α → Prop} (h : ∀ x, p x → q x) :
     (∃ x, p x) → (∃ x, q x) := by
-  sorry
+  rintro ⟨x, hpx⟩
+  use x
+  exact h x hpx
   done
 
 -- Exercise: prove this by contraposition.
 example : 2 ≠ 4 → 1 ≠ 2 := by
-  sorry
+  contrapose!
+  intro h
+  exfalso
+  apply @OfNat.one_ne_ofNat ℕ _ _ (2 : ℕ)
+  exact h
   done
 
 /- Prove the following with basic tactics,
 in particular without using `tauto`, `grind` or lemmas from Mathlib. -/
 example {α : Type*} {p : α → Prop} {r : Prop} :
     ((∃ x, p x) → r) ↔ (∀ x, p x → r) := by
-  sorry
+  constructor
+  ·
+    intro h x hpx
+    exact h ⟨x, hpx⟩
+  ·
+    intro h ⟨x, hpx⟩
+    exact h x hpx
   done
 
 /- Prove the following with basic tactics,
 in particular without using `tauto`, `grind` or lemmas from Mathlib. -/
 example {α : Type*} {p : α → Prop} {r : Prop} :
     (∃ x, p x ∧ r) ↔ ((∃ x, p x) ∧ r) := by
-  sorry
+  constructor
+  ·
+    intro ⟨x, hpx, hr⟩
+    exact ⟨⟨x, hpx⟩, hr⟩
+  ·
+    intro ⟨⟨x, hpx⟩, hr⟩
+    exact ⟨x, hpx, hr⟩
   done
 
 /- Prove the following without using `push_neg` or lemmas from Mathlib.
 You will need to use `by_contra` in the proof. -/
 example {α : Type*} (p : α → Prop) : (∃ x, p x) ↔ (¬ ∀ x, ¬ p x) := by
-  sorry
+  constructor
+  ·
+    intro ⟨x, hpx⟩ hpx'
+    specialize hpx' x
+    tauto
+  ·
+    intro h
+    by_contra h'
+    apply h
+    intro x
+    tauto
   done
 
 def SequentialLimit (u : ℕ → ℝ) (l : ℝ) : Prop :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |u n - l| < ε
 
 example (a : ℝ) : SequentialLimit (fun n : ℕ ↦ a) a := by
-  sorry
+  unfold SequentialLimit
+  intro ε ε_pos
+  use 0
+  intro n _
+  rwa [sub_self, abs_zero]
   done
 
 /-
@@ -60,24 +105,47 @@ Use `calc` to prove this.
 You can use `exact?` to find lemmas from the library,
 such as the fact that factorial is monotone. -/
 example (n m k : ℕ) (h : n ≤ m) : (n)! ∣ (m + 1)! := by
-  sorry
-  done
+  calc
+  (n)! ∣ (m)! := by
+    exact factorial_dvd_factorial h
+  _ ∣ (m + 1)! := by
+    exact Dvd.intro_left m.succ rfl
+    done
+
+
 
 example (a b c x y : ℝ) (h : a ≤ b) (h2 : b < c) (h3 : x ≤ y) :
     a + exp x ≤ c + exp (y + 2) := by
-  sorry
+  apply _root_.add_le_add
+  ·
+    trans b
+    ·
+      exact h
+    ·
+      exact le_of_lt h2
+  ·
+    rw [exp_le_exp, ← add_zero x]
+    apply _root_.add_le_add
+    ·
+      exact h3
+    ·
+      norm_num
   done
 
 -- Use `rw?` or `rw??` to help you in the following calculation.
 -- Alternatively, write out a calc block by hand.
 example {G : Type*} [Group G] {a b c d : G}
     (h : a⁻¹ * b * c * c⁻¹ * a * b⁻¹ * a * a⁻¹ = b) (h' : b * c = c * b) : b = 1 := by
+  rw [mul_assoc, mul_inv_cancel, mul_one, mul_assoc, mul_assoc, mul_assoc, ← mul_assoc c,
+    mul_inv_cancel, one_mul] at h
+  nth_rewrite 2 [← inv_inv a] at h
+  rw [← mul_inv_rev] at h
   sorry
 
 /-- Prove the following using `linarith`.
 Note that `linarith` cannot deal with implication or if and only if statements. -/
 example (a b c : ℝ) : a + b ≤ c ↔ a ≤ c - b := by
-  sorry
+  constructor <;> intro h <;> linarith
   done
 
 

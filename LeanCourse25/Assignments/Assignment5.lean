@@ -79,7 +79,20 @@ def BijectiveOn {α β : Type*} (f : α → β) (s : Set α) (t : Set β) : Prop
 -- Let us explore this theme in the following exercises.
 
 example : ∃ f : ℕ → ℕ, BijectiveOn f univ (univ \ {0}) := by
-  sorry
+  use fun n => n + 1
+  refine ⟨?WellDefined, ?Injective, ?Surjective⟩
+  · intro x hx
+    simp only [image_univ, mem_range, Nat.exists_add_one_eq] at hx
+    simp only [mem_diff, mem_univ, mem_singleton_iff, true_and]
+    linarith
+  · intro x hx y hy  hxy
+    simpa using hxy
+  · intro y hy
+    use y - 1
+    constructor
+    · simp
+    · simp only [mem_diff, mem_univ, mem_singleton_iff, true_and] at hy
+      simp [Nat.sub_add_cancel (show 1 ≤ y by omega)]
 
 example {α : Type*} [Infinite α] {a : α} : ∃ f : α → α, BijectiveOn f (univ \ {a}) univ := by
   -- Hint: a useful first step is "there exists an injective map ℕ → α".
@@ -114,8 +127,9 @@ Remember that Lean has proof irrelevance: any two proofs of a given proposition 
 example (choiceFunction : ∀ (α : Type) (p : α → Prop) (_h : ∃ x, p x), α)
     (h : ∀ (α : Type) (p : α → Prop) (x : α) (hx : p x), choiceFunction α p ⟨x, hx⟩ = x) :
     False := by
-  sorry
-
+  have contr := h ℕ (fun n => True) 0 (by trivial) ▸ h ℕ (fun n => True) 1 (by trivial)
+  contradiction
+  
 
 end choice
 
@@ -147,7 +161,36 @@ attribute [-simp] Finset.card_powerset
 
 lemma finset_card_powerset (α : Type*) (s : Finset α) :
     Finset.card (Finset.powerset s) = 2 ^ Finset.card s := by
-  sorry
+  let decidable_α : DecidableEq α := by exact Classical.typeDecidableEq α
+  induction s using Finset.induction with
+  | empty => simp only [Finset.powerset_empty, Finset.card_singleton, Finset.card_empty, pow_zero]
+  | insert a s a_notMem_s hs =>
+    rw [Finset.card_insert_of_notMem a_notMem_s,
+    Finset.powerset_insert, Finset.card_union_of_disjoint ?Disjoint]
+    rotate_left
+    · rw [Finset.disjoint_iff_ne]
+      rintro x hx y hy
+      simp only [Finset.mem_powerset, Finset.mem_image] at hx hy
+      obtain ⟨y', y_subset_s, hy⟩ := hy
+      have a_notMem_x : a ∉ x := by exact fun a_1 ↦ a_notMem_s (hx a_1)
+      have a_mem_y : a ∈ y := by rw [← hy]; exact Finset.mem_insert_self a y'
+      symm
+      apply ne_of_not_le
+      rw [Finset.le_iff_subset, Finset.not_subset]
+      use a
+    · suffices (Finset.image (insert a) s.powerset).card = s.powerset.card by
+        simp only [hs, this]
+        ring
+      apply Finset.card_image_of_injOn
+      intro x hx y hy hxy
+      simp only [Finset.coe_powerset, mem_preimage, mem_powerset_iff, Finset.coe_subset] at hx hy
+      have a_notMem_x : a ∉ x := by exact fun a_1 ↦ a_notMem_s (hx a_1)
+      have a_notMem_y : a ∉ y := by exact fun a_1 ↦ a_notMem_s (hy a_1)
+      rw [← Finset.union_singleton, ← Finset.union_singleton, Finset.union_eq_union_iff_right,
+        Finset.union_singleton, Finset.union_singleton, Finset.subset_insert_iff,
+        Finset.subset_insert_iff, Finset.erase_eq_of_notMem a_notMem_x,
+        Finset.erase_eq_of_notMem a_notMem_y] at hxy
+      exact le_antisymm hxy.1 hxy.2
   done
 
 end cardinality
